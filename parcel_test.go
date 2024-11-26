@@ -123,15 +123,15 @@ func TestSetStatus(t *testing.T) {
 
 	// check
 	// получите добавленную посылку и убедитесь, что статус обновился
-
+	finalStatus, err := store.Get(id)
+	require.NoError(t, err, "Ошибка при запросе обновленного статуса")
 	switch preStatus {
 	case ParcelStatusRegistered:
-
-		require.Equal(t, res.Status, ParcelStatusSent, "Ошибка при смене статуса посылки")
+		require.Equal(t, ParcelStatusSent, finalStatus.Status, "Ошибка при смене статуса посылки")
 	case ParcelStatusSent:
-		require.Equal(t, res.Status, ParcelStatusDelivered, "Ошибка при смене статуса посылки")
+		require.Equal(t, ParcelStatusDelivered, finalStatus.Status, "Ошибка при смене статуса посылки")
 	case ParcelStatusDelivered:
-		require.Equal(t, res.Status, ParcelStatusDelivered, "Ошибка при смене статуса посылки")
+		require.Equal(t, ParcelStatusDelivered, finalStatus.Status, "Ошибка при смене статуса посылки")
 	}
 
 }
@@ -140,7 +140,7 @@ func TestSetStatus(t *testing.T) {
 func TestGetByClient(t *testing.T) {
 	// prepare
 	//настройте подключение к БД
-	db, err := sql.Open("sqlite", "tracker.go")
+	db, err := sql.Open("sqlite", "tracker.db")
 	require.NoError(t, err, "Ошибка подключения к БД")
 	defer db.Close()
 
@@ -185,10 +185,10 @@ func TestGetByClient(t *testing.T) {
 		require.True(t, exists, "Посылка с идентификатором %d отсутствует в parcelMap", parcel.Number)
 
 		// Проверяем, что все поля совпадают
-		require.Equal(t, expectedParcel.Client, parcel.Client, "Поле Client не совпадает")
-		require.Equal(t, expectedParcel.Address, parcel.Address, "Поле Number не совпадает")
-		require.Equal(t, expectedParcel.Status, parcel.Status, "Поле OtherField1 не совпадает")
-		require.Equal(t, expectedParcel.CreatedAt, parcel.CreatedAt, "Поле OtherField2 не совпадает")
+		require.Equal(t, expectedParcel.Client, client, "Поле Client не совпадает")
+		require.Equal(t, expectedParcel.Address, parcel.Address, "Поле Address не совпадает")
+		require.Equal(t, expectedParcel.Status, parcel.Status, "Поле Status не совпадает")
+		require.Equal(t, expectedParcel.CreatedAt, parcel.CreatedAt, "Поле CreatedAt не совпадает")
 		// в parcelMap лежат добавленные посылки, ключ - идентификатор посылки, значение - сама посылка
 		// убедитесь, что все посылки из storedParcels есть в parcelMap
 		// убедитесь, что значения полей полученных посылок заполнены верно
