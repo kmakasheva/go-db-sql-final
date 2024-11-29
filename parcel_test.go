@@ -32,9 +32,7 @@ func getTestParcel() Parcel {
 func TestAddGetDelete(t *testing.T) {
 	// prepare
 	db, err := sql.Open("sqlite", "tracker.db") // настройте подключение к БД
-	if err != nil {
-		require.NoError(t, err)
-	}
+	require.NoError(t, err)
 	defer db.Close()
 
 	store := NewParcelStore(db)
@@ -57,8 +55,8 @@ func TestAddGetDelete(t *testing.T) {
 	// проверьте, что посылку больше нельзя получить из БД
 	err = store.Delete(id)
 	require.NoError(t, err, "Ошибка при удалении посылки")
-	RecieveDeletedParcel, err := store.Get(id)
-	require.Empty(t, RecieveDeletedParcel, "Упс! Кажется, посылка не была удалена")
+	_, err = store.Get(id)
+	require.Error(t, err, "Программа должна была выдать ошибку")
 }
 
 // TestSetAddress проверяет обновление адреса
@@ -85,6 +83,7 @@ func TestSetAddress(t *testing.T) {
 	// check
 	// получите добавленную посылку и убедитесь, что адрес обновился
 	ReceivedParcel, err := store.Get(id)
+	require.NoError(t, err, "Ошибка при получении добавленной посылки")
 	require.Equal(t, newAddress, ReceivedParcel.Address, "О-оу! Адрес не поменялся(")
 }
 
@@ -105,35 +104,14 @@ func TestSetStatus(t *testing.T) {
 
 	// set status
 	// обновите статус, убедитесь в отсутствии ошибки
-	res, err := store.Get(id)
-	preStatus := res.Status
-	require.NoError(t, err, "Ошибка при получении данных о посылке")
-
-	switch res.Status {
-	case ParcelStatusRegistered:
-		err = store.SetStatus(id, ParcelStatusSent)
-		require.NoError(t, err, "Ошибка при процессе смены статуса посылки")
-	case ParcelStatusSent:
-		err = store.SetStatus(id, ParcelStatusDelivered)
-		require.NoError(t, err, "Ошибка при процессе смены статуса посылки")
-	case ParcelStatusDelivered:
-		err = store.SetStatus(id, ParcelStatusDelivered)
-		require.NoError(t, err)
-	}
+	err = store.SetStatus(id, ParcelStatusSent)
+	require.NoError(t, err, "Ошибка при смене статуса")
 
 	// check
 	// получите добавленную посылку и убедитесь, что статус обновился
-	finalStatus, err := store.Get(id)
-	require.NoError(t, err, "Ошибка при запросе обновленного статуса")
-	switch preStatus {
-	case ParcelStatusRegistered:
-		require.Equal(t, ParcelStatusSent, finalStatus.Status, "Ошибка при смене статуса посылки")
-	case ParcelStatusSent:
-		require.Equal(t, ParcelStatusDelivered, finalStatus.Status, "Ошибка при смене статуса посылки")
-	case ParcelStatusDelivered:
-		require.Equal(t, ParcelStatusDelivered, finalStatus.Status, "Ошибка при смене статуса посылки")
-	}
-
+	UpdParcel, err := store.Get(id)
+	require.NoError(t, err, "Ошибка при получении данных о посылке")
+	require.Equal(t, ParcelStatusSent, UpdParcel.Status, "Статус посылки не обновился")
 }
 
 // TestGetByClient проверяет получение посылок по идентификатору клиента
@@ -185,10 +163,7 @@ func TestGetByClient(t *testing.T) {
 		require.True(t, exists, "Посылка с идентификатором %d отсутствует в parcelMap", parcel.Number)
 
 		// Проверяем, что все поля совпадают
-		require.Equal(t, expectedParcel.Client, client, "Поле Client не совпадает")
-		require.Equal(t, expectedParcel.Address, parcel.Address, "Поле Address не совпадает")
-		require.Equal(t, expectedParcel.Status, parcel.Status, "Поле Status не совпадает")
-		require.Equal(t, expectedParcel.CreatedAt, parcel.CreatedAt, "Поле CreatedAt не совпадает")
+		require.Equal(t, expectedParcel, parcel, "Значения не совпадают")
 		// в parcelMap лежат добавленные посылки, ключ - идентификатор посылки, значение - сама посылка
 		// убедитесь, что все посылки из storedParcels есть в parcelMap
 		// убедитесь, что значения полей полученных посылок заполнены верно
